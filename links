@@ -1,0 +1,44 @@
+[A]
+https://www.mayoclinic.org/es/diseases-conditions/type-2-diabetes/diagnosis-treatment/drc-20351199#:~:text=Examen%20de%20glucemia%20en%20ayunas.&text=Menos%20de%20100%20mg%2Fdl,pruebas%20distintas%3A%20se%20diagnostica%20diabetes.
+
+[B] American Diabetes Association: https://www.diabetes.org/
+    National Institutes of Health: https://www.niddk.nih.gov/health-information/diabetes
+    American Association of Clinical Endocrinologists: https://www.aace.com/
+
+https://www.luismartinezriaza.es/blog/2020/01/22/-cual-es-tu-nivel-normal-de-oxigeno/
+
+
+
+## A primera vista se observa que hay unos pocos pacientes que tienen muchas más muestras que el resto de
+## los pacientes.
+
+# La importante organización Mayo Clinic[A], comenta que se requieren dos muestras de glucosa para diagnosticar la diabetes.
+# La primera muestra se toma en ayunas, después de que la persona no haya comido ni bebido nada,
+# excepto agua, durante al menos 8 horas.
+# Si el nivel de glucosa en la sangre es superior a 126 mg/dl (7 mmol/l), se considera positivo para diabetes.
+
+# Si el nivel de glucosa en la sangre es inferior a 126 mg/dl (7 mmol/l),
+# se puede realizar una segunda prueba para confirmar el diagnóstico.
+# La segunda prueba se puede realizar en cualquier momento del día, incluso después de comer.
+# Si el nivel de glucosa en la sangre es superior a 200 mg/dl (11,1 mmol/l), se considera positivo para diabetes.
+
+conteo_tomas <- table(glucose$Patient)
+df_conteo <- data.frame(Patient = names(conteo_tomas), Tomas = as.vector(conteo_tomas))
+
+ggplot(df_conteo, aes(x = Tomas)) +
+  geom_density(binwidth = 1, fill = "blue", color = "black") +
+  labs(title = "Histograma de Tomas por Paciente", x = "Número de Tomas", y = "Frecuencia") +
+    theme_fivethirtyeight()
+
+## Ya que no se necesitas excesivas muestras para mostrar si un paciente está en riesgo de diabetes o no,
+## podemos eliminar los pacientes que tienen más de 15 muestras.
+df_conteo <- df_conteo[df_conteo$Tomas > 15 | df_conteo$Tomas < 2,]
+# glucose <- glucose[!(glucose$Patient %in% df_conteo$Patient),]
+
+conteo_tomas <- table(glucose$Patient)
+df_conteo <- data.frame(Patient = names(conteo_tomas), Tomas = as.vector(conteo_tomas))
+
+ggplot(df_conteo, aes(x = Tomas)) +
+  geom_bar(binwidth = 1, fill = "blue", color = "black") +
+  labs(title = "Histograma de Tomas por Paciente", x = "Número de Tomas", y = "Frecuencia") +
+  theme_fivethirtyeight()
