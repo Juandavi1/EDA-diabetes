@@ -1,4 +1,5 @@
-wh <- read_csv("data/Weight_Height.csv", col_types = type())
+wh <- read_csv("data/Weight_Height.csv")
+imc <- read_csv("data/Weight_Height.csv")
 head(wh)
 
 wh[wh$Patient == 663, ]

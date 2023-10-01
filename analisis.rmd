@@ -83,8 +83,8 @@ entender a qué se refiere cada variable.
 
 La glucosa es el azúcar que el cuerpo utiliza como energía. Cuando los niveles de glucosa en sangre son altos, puede ser un signo de diabetes.
 
-```{r}
-glucose <- read_csv("data/glucose.csv", col_types = cols())
+```{r message=FALSE, warning=FALSE}
+glucose <- read_csv("data/glucose.csv")
 glucose
 ```
 
@@ -391,7 +391,8 @@ Se eliminan los outliers de las muestras de oximetria segun los analisis anterio
 \
 
 ```{r}
-# oximetry <- oximetry %>% filter(SpO2 > 50)
+oximetry <- oximetry %>%
+  mutate(Date = parse_date_time(Date, orders = "mdy HM"))
 ```
 
 
@@ -575,9 +576,13 @@ ya que podría deberse a un error de medición o un error al ingresar los datos.
 \
 
 ```{r}
-bloodPressure <- bloodPressure %>% filter(Systolic == 0 | Diastolic == 0 | AvBloodPressure == 0 | HeartRate == 0)
+bloodPressure <- bloodPressure %>% filter(Systolic != 0 | Diastolic != 0 | AvBloodPressure != 0 | HeartRate != 0)
 ```
 
+```{r}
+bloodPressure <- bloodPressure %>%
+    mutate(Date = parse_date_time(Date, orders = "mdy HM"))
+```
 
 ### IMC
 
@@ -654,21 +659,130 @@ ggplotly(ggplot(imc, aes(y = Height)) +
 
 #### Transformación
 
-## Preparación de los datos
+```{r}
+imc <- imc %>%
+    mutate(Date = parse_date_time(Date, orders = "mdy HM"))
+```
+
 ### Union de tablas
+
+```{r}
+diabetes <- glucose %>%
+  inner_join(oximetry, by = c("Patient", "Date")) %>%
+  inner_join(imc, by = c("Patient", "Date")) %>%
+  inner_join(bloodPressure, by = c("Patient", "Date"))
+
+```
+
+
+#### Transformación
+
+```{r}
+diabetes <- diabetes %>%
+    mutate(Date = as.numeric(Date)) %>%
+    select(-Patient, -IsMorning)
+
+diabetes_scaled <-  diabetes %>%
+    scale() 
+```
+
 ### Correlación
+
+
+```{r}
+diabetes_scaled %>%
+  cor() %>%
+  ggcorrplot() %>%
+  ggplotly()
+```
+
 ### PCA
+
+```{r}
+PCA <- prcomp(diabetes_scaled)
+```
+
+```{r}
+fviz_eig(PCA)
+```
+
+```{r}
+fviz_cos2(PCA, choice = "var", axes = 1:2)
+biplot(PCA)
+```
+
+
+
 
 ## Modelado Clustering
 ### Exploración de modelos
+
+```{r}
+model <- kmeans(diabetes_scaled, 2, iter.max = 100, algorithm = "Lloyd")
+diabetes_with_clusters <- cbind(diabetes, Cluster = factor(model$cluster))
+diabetes_scaled_with_clusters <- cbind(diabetes_scaled, Cluster = factor(model$cluster))
+
+```
+
+```{r}
+ggplotly(ggplot(as.data.frame(diabetes_with_clusters), aes(x = IMC, fill = Cluster)) +
+  geom_histogram(color = "white") +
+  facet_wrap(~Cluster) +
+  ggtitle("K-Means Clustering en Componentes Principales"))
+
+```
+
 ### Evaluación Clustering
+
+```{r}
+library(cluster)
+```
+
+
+```{r}
+silhouette_score <- silhouette(model$cluster, dist(diabetes_with_clusters))
+plot(silhouette_score)
+```
+
 ### Exportación
 
 ## Selección de grupo vulnerable
 
+```{r}
+diabetes_with_clusters 
+  
+```
+
+
 ## Modelado clasificación
-### Exploración de modelos
+
+```{r}
+particion <- createDataPartition(diabetes_with_clusters$Cluster, p = 0.7, list = FALSE)
+train <- diabetes_with_clusters[particion, ]
+test <- diabetes_with_clusters[-particion, ]
+
+modelo_arbol <- rpart(Cluster ~ ., data = train, method = "class")
+
+```
+
+```{r}
+prp(modelo_arbol)
+```
+
 ### Evaluación clasificación
+
+```{r}
+y_pred <- predict(modelo_arbol, newdata = test, type = "prob")
+
+y_pred_cluster <- if_else(y_pred[,2] > 0.5, 2, 1)
+y_pred_cluster <- factor(y_pred_cluster, levels = levels(test$Cluster))
+
+
+accuracy(test$Cluster, y_pred_cluster)
+```
+
+
+
 ### Exportación
 
 ## Conclusiones
