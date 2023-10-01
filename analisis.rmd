@@ -4,6 +4,8 @@ author: "Juan David Correa Malagon"
 date: "21 septiembre 2023"
 output:
     html_document:
+        output_file: index.html
+        name: index.html
         toc: true
         font_size: 24pt
         toc_depth: 4
