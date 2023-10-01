@@ -5,10 +5,20 @@ options(
   knitr.table.bg = "#F5F5F5"
 )
 
+install.packages("rpart.plot")
+
+
 # Cargar paquetes
 library(tidyverse)
 library(ggplot2)
 library(plotly)
+library(caret)
+library(rpart)
+library(caret)
+library(ggcorrplot)
+
+library(rpart.plot)
+library(rpart)
 
 # Configuración de la visualización de datos
 theme_set(theme_minimal(base_size = 18))
@@ -52,6 +62,31 @@ diabetes <- glucose %>%
 diabetes <- diabetes %>%
   mutate(Date = as.numeric(Date))
 
-scaled <- scale(diabetes)
-ggplotly(ggcorrplot(cor(scaled)))
+ggplotly(ggcorrplot(cor(diabetes)))
+
+
+wss <- 0
+for (i in 1:30) {
+  km.iris <- kmeans(scale(diabetes), centers = i, nstart=25, iter.max = 50)
+  wss[i] <- km.iris$tot.withinss
+}
+
+plot(1:30, wss, type = "b", 
+     xlab = "Numero de Clusters", 
+     ylab = "Suma de cuadrados entre grupos")
+
+
+model <- kmeans(scale(diabetes), 2, iter.max = 100, algorithm = "Lloyd")
+diabetes_with_clusters <- cbind(diabetes, Cluster = factor(model$cluster))
+
+
+particion <- createDataPartition(diabetes_with_clusters$Cluster, p = 0.7, list = FALSE)
+train <- diabetes_with_clusters[particion, ]
+test <- diabetes_with_clusters[-particion, ]
+
+tree_model <- rpart(Cluster ~ ., data = train, method = "class")
+plotcp(tree_model)
+prp(tree_model)
+
+
 

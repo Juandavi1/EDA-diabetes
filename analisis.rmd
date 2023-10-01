@@ -668,7 +668,7 @@ imc <- imc %>%
 
 ### Union de tablas
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 diabetes <- glucose %>%
   inner_join(oximetry, by = c("Patient", "Date")) %>%
   inner_join(imc, by = c("Patient", "Date")) %>%
@@ -714,10 +714,9 @@ biplot(PCA)
 ```
 
 
-
-
 ## Modelado Clustering
-### Exploración de modelos
+
+### K-means
 
 ```{r}
 model <- kmeans(diabetes_scaled, 2, iter.max = 100, algorithm = "Lloyd")
@@ -726,7 +725,16 @@ diabetes_scaled_with_clusters <- cbind(diabetes_scaled, Cluster = factor(model$c
 
 ```
 
+### Evaluación Clustering
+
 ```{r}
+silhouette_score <- silhouette(model$cluster, dist(diabetes_with_clusters))
+plot(silhouette_score)
+```
+
+## Selección de grupo vulnerable
+
+```{r message=FALSE, warning=FALSE}
 ggplotly(ggplot(as.data.frame(diabetes_with_clusters), aes(x = IMC, fill = Cluster)) +
   geom_histogram(color = "white") +
   facet_wrap(~Cluster) +
@@ -734,58 +742,56 @@ ggplotly(ggplot(as.data.frame(diabetes_with_clusters), aes(x = IMC, fill = Clust
 
 ```
 
-### Evaluación Clustering
 
-```{r}
-library(cluster)
-```
+## Clasificación
 
-
-```{r}
-silhouette_score <- silhouette(model$cluster, dist(diabetes_with_clusters))
-plot(silhouette_score)
-```
-
-### Exportación
-
-## Selección de grupo vulnerable
-
-```{r}
-diabetes_with_clusters 
-  
-```
-
-
-## Modelado clasificación
+### Split data
 
 ```{r}
 particion <- createDataPartition(diabetes_with_clusters$Cluster, p = 0.7, list = FALSE)
 train <- diabetes_with_clusters[particion, ]
 test <- diabetes_with_clusters[-particion, ]
-
-modelo_arbol <- rpart(Cluster ~ ., data = train, method = "class")
-
 ```
 
+### Crear modelo 
+
 ```{r}
-prp(modelo_arbol)
+tree_model <- rpart(Cluster ~ ., data = train, method = "class")
 ```
 
-### Evaluación clasificación
+### Arbol 
 
 ```{r}
-y_pred <- predict(modelo_arbol, newdata = test, type = "prob")
+prp(tree_model)
+```
 
+### Curva de complejidad
+
+```{r}
+plotcp(tree_model)
+```
+
+### Predicción
+
+```{r}
+y_pred <- predict(tree_model, newdata = test, type = "prob")
+```
+
+### Evaluación
+
+```{r}
 y_pred_cluster <- if_else(y_pred[,2] > 0.5, 2, 1)
 y_pred_cluster <- factor(y_pred_cluster, levels = levels(test$Cluster))
+```
 
-
+```{r}
 accuracy(test$Cluster, y_pred_cluster)
 ```
 
+```{r}
+confusionMatrix(test$Cluster, y_pred_cluster)
+```
 
-
-### Exportación
 
 ## Conclusiones
 
