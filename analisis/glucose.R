@@ -24,8 +24,8 @@ library(plotly)
 # Distribución de glucosa
 # La mayoría de los pacientes tienen un buen control de sus niveles de glucosa en sangre. Esto se debe a que la mayoría de los datos se encuentran dentro de los rangos normales.
 # Hay un pequeño número de pacientes con diabetes que tienen niveles de glucosa en sangre elevados. Estos pacientes pueden tener un mayor riesgo de complicaciones de la diabetes, como enfermedades cardíacas, accidentes cerebrovasculares y ceguera.
-p <- ggplot(glucose , aes(y = Glucose)) +
-  geom_boxplot(binwidth = 10, color="#0A2F35", fill="#12492F", alpha=0.7, outlier.shape = NA, coef = 2) +
+p <- ggplot(glucose[glucose$Patient == 2,] %>% arrange(Date) , aes(y = Glucose, x = as.Date(Date))) +
+  geom_line(binwidth = 10, color="#0A2F35", fill="#12492F", alpha=0.7, outlier.shape = NA, coef = 2) +
   labs(x = "Glucosa", y = "Frecuencia") +
   theme_clean() +
   ggtitle("Distribución de glucosa")

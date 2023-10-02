@@ -48,8 +48,3 @@ ggplot(wh, aes(x = IMC)) +
   theme_fivethirtyeight() +
   geom_vline(xintercept = 25, color = "red", linetype = "dashed", size = 1, show.legend = TRUE) +
   ggtitle("Distribución de BMI")
-
-
-
-imc
-  

@@ -578,7 +578,7 @@ bloodPressure <- bloodPressure %>% filter(Systolic != 0 | Diastolic != 0 | AvBlo
 ```{r}
 bloodPressure <- bloodPressure %>%
     mutate(Date = parse_date_time(Date, orders = "mdy HM")) %>%
-    mutate(AvBloodPressure = (Systolic + Diastolic) / 2) %>%
+    #mutate(AvBloodPressure = (Systolic + Diastolic) / 2) %>%
     filter(HeartRate > 0)
 ```
 
@@ -668,6 +668,12 @@ imc <- imc %>%
 
 ### Union de datasets
 
+En este punto se realiza la unión de los datos por el método inner join. 
+El join escogido se debe a que al ser una predicción a un tema tan delicado como 
+es la diabetes, se requiere tener la mayor cantidad de datos por paciente para lograr una mayor confianza en los resiltados. 
+Si alguno de los pacientes no cuenta con alguno de los examenes, simplemente
+se será excluido. 
+
 ```{r message=FALSE, warning=FALSE}
 diabetes <- glucose %>%
   inner_join(oximetry, by = c("Patient", "Date")) %>%
@@ -681,14 +687,22 @@ diabetes <- glucose %>%
 
 #### Transformación
 
+Se modifica el campo Date a timestamp para trabajarlo como numero ya que los modelos de 
+clustering utilizan las distancias de los datos para lograr agruparlos.  
+
 ```{r}
 diabetes <- diabetes %>%
     mutate(Date = as.numeric(Date)) %>%
     select(-Patient, -IsMorning) 
-
-diabetes_scaled <-  diabetes %>%
-    scale() 
 ```
+
+Normalización de datos 
+
+```{r}
+preProcessDiabetes <- preProcess(diabetes, method = c("center", "scale"))
+diabetes_scaled <- predict(preProcessDiabetes,diabetes)
+```
+
 
 ### Correlación
 
