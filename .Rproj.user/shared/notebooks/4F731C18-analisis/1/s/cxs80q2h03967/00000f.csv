@@ -1,0 +1,15 @@
+"0","plot_ly(
+  type = ""sunburst"",
+  ids = modelo_arbol$frame$var,
+  labels = modelo_arbol$frame$yval,
+  parents = modelo_arbol$frame$var_parent,
+  values = modelo_arbol$frame$n,
+  branchvalues = ""total""
+) %>%
+layout(
+  margin = list(l = 0, r = 0, b = 0, t = 0)
+) %>%
+config(displayModeBar = FALSE)
+"
+"2","Error: object 'modelo_arbol' not found
+"
