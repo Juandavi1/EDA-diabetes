@@ -88,5 +88,10 @@ tree_model <- rpart(Cluster ~ ., data = train, method = "class")
 plotcp(tree_model)
 prp(tree_model)
 
+y_pred <- predict(tree_model, newdata = test, type = "prob")
+y_pred_cluster <- if_else(y_pred[,2] > 0.5, 2, 1)
+y_pred_cluster <- factor(y_pred_cluster, levels = levels(test$Cluster))
 
+cf <- confusionMatrix(test$Cluster, y_pred_cluster)
+ggplotly(fourfoldplot(as.table(cf),color=c("red","green"),main = "Confusion Matrix"))
 

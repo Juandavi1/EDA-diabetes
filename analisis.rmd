@@ -789,7 +789,14 @@ accuracy(test$Cluster, y_pred_cluster)
 ```
 
 ```{r}
-confusionMatrix(test$Cluster, y_pred_cluster)
+cf <- confusionMatrix(test$Cluster, y_pred_cluster)
+fourfoldplot(as.table(cf),color=c("red","green"),main = "Confusion Matrix")
+```
+
+### Exportar 
+
+```{r}
+saveRDS(tree_model, "diabetes.rds")
 ```
 
 
