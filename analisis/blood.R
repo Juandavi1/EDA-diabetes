@@ -58,3 +58,11 @@ ggplotly(ggpairs(
   columns = c("Systolic", "Diastolic", "AvBloodPressure", "HeartRate"),
   title = "Gráfico de correlación entre variables",
 ))
+
+
+a <- blood %>%
+  mutate(av = (Systolic + Diastolic) / 2) %>%
+  filter( av == AvBloodPressure) %>%
+  select(-Patient, -Date, -AvBloodPressure, -Diastolic, -Systolic)
+
+ggplotly(ggcorrplot(cor(a)))

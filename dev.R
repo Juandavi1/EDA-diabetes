@@ -16,6 +16,7 @@ library(caret)
 library(rpart)
 library(caret)
 library(ggcorrplot)
+library(factoextra)
 
 library(rpart.plot)
 library(rpart)
@@ -57,7 +58,8 @@ diabetes <- glucose %>%
   inner_join(oximetry, by = c("Patient", "Date")) %>%
   inner_join(bloodPressure, by = c("Patient", "Date")) %>%
   inner_join(imc, by = c("Patient", "Date")) %>%
-  select(-Patient, -is_morning)
+  select(-Patient, -is_morning) %>%
+  select(AvBloodPressure, IMC, Systolic, Weight)
 
 diabetes <- diabetes %>%
   mutate(Date = as.numeric(Date))
@@ -66,17 +68,17 @@ ggplotly(ggcorrplot(cor(diabetes)))
 
 
 wss <- 0
-for (i in 1:30) {
-  km.iris <- kmeans(scale(diabetes), centers = i, nstart=25, iter.max = 50)
+for (i in 1:10) {
+  km.iris <- kmeans(scale(diabetes %>% select(AvBloodPressure, IMC, Systolic, Weight)), centers = i, nstart=25, iter.max = 50)
   wss[i] <- km.iris$tot.withinss
 }
 
-plot(1:30, wss, type = "b", 
+plot(1:10, wss, type = "b", 
      xlab = "Numero de Clusters", 
      ylab = "Suma de cuadrados entre grupos")
 
 
-model <- kmeans(scale(diabetes), 2, iter.max = 100, algorithm = "Lloyd")
+model <- kmeans(scale(diabetes), 4, iter.max = 100, algorithm = "Lloyd")
 diabetes_with_clusters <- cbind(diabetes, Cluster = factor(model$cluster))
 
 
@@ -92,6 +94,42 @@ y_pred <- predict(tree_model, newdata = test, type = "prob")
 y_pred_cluster <- if_else(y_pred[,2] > 0.5, 2, 1)
 y_pred_cluster <- factor(y_pred_cluster, levels = levels(test$Cluster))
 
+ggplotly(fviz_nbclust(scale(diabetes), kmeans, method = "silhouette", k.max = 10))
+
+class(model %>% select(betweenss))
+
+ggplotly(ggplot(as.data.frame(diabetes_with_clusters), aes(x = IMC, fill = Cluster)) +
+           geom_histogram(color = "white") +
+           facet_wrap(~Cluster) +
+           geom_vline(xintercept = 30, color = "red", linetype = "dashed", size = 1, show.legend = TRUE) +
+           ggtitle("K-Means Clustering en Componentes Principales"))
+
 cf <- confusionMatrix(test$Cluster, y_pred_cluster)
 ggplotly(fourfoldplot(as.table(cf),color=c("red","green"),main = "Confusion Matrix"))
+
+silhouette_score <- silhouette(model$cluster, dist(diabetes_with_clusters))
+silhouette_score
+plot(silhouette_score)
+
+plot(silhouette_score,
+     xlab = "Coeficiente de silueta",
+     ylab = "Número de cluster",
+     main = "Gráfico de silueta")
+abline(h = 0.5, lty = 2)
+
+
+plot(diabetes_with_clusters, col =  model$cluster, main="Glucose")
+
+
+saveRDS(tree_model, "diabetes.rds")
+
+set.seed(123)
+
+fviz_nbclust(scale(diabetes), kmeans, method = "silhouette",)
+
+PCA <- prcomp(scale(diabetes))
+ggplotly(fviz_cos2(PCA, choice = "var", axes = 1:2))
+
+silhouette_score <- cluster.stats(dist(diabetes), model$cluster)
+mean(silhouette_score)
 

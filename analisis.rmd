@@ -16,11 +16,12 @@ output:
         highlight: kate
         df_print: paged
         code_folding: show
-
 ---
 ```{r setup, include=FALSE}
 source("deps.r")
 source("utils.r")
+
+set.seed(123)
 ```
 
 # Diabetes
@@ -178,7 +179,8 @@ ggplotly(p)
 
 \
 Las tomas de glucosa se suelen tomar en la mañana y en la tarde. Se espera que los valores de glucosa sean más bajos en la mañana y más altos en la tarde.
-El siguiente grafico confirma esta hipotesis.\
+El siguiente gráfico confirma esta hipotesis.
+\
 
 ```{r message=FALSE, warning=FALSE}
 glucose$IsMorning <- ifelse(is_morning(glucose$Date), "Morning", "Afternoon")
@@ -194,7 +196,7 @@ ggplotly(ggplot(glucose, aes(x = Glucose, fill = IsMorning)) +
 ```
 
 \
-El siguiente grafico muestra las tomas de los pacientes en la mañana con una marca en el limite de lo que se considera normal. Los valores a la derecha de la marca se consideran altos y se considerarían vulnerables
+El siguiente gráfico muestra las tomas de los pacientes en la mañana con una marca en el limite de lo que se considera normal. Los valores a la derecha de la marca se consideran altos y se considerarían vulnerables
 a diabetes.\
 ```{r message=FALSE, warning=FALSE}
 
@@ -210,7 +212,7 @@ ggplotly(ggplot(glucose %>% filter(IsMorning=="Morning"), aes(x = Glucose)) +
 ```
 
 \
-El siguiente grafico muestra las tomas de los pacientes en la tarde con una marca en el limite de lo que se considera normal. Los valores a la derecha de la marca se consideran altos y se considerarían vulnerables
+El siguiente gráfico muestra las tomas de los pacientes en la tarde con una marca en el limite de lo que se considera normal. Los valores a la derecha de la marca se consideran altos y se considerarían vulnerables
 a diabetes.\
 ```{r message=FALSE, warning=FALSE}
 
@@ -228,7 +230,7 @@ ggplotly(ggplot(glucose %>% filter(IsMorning=="Afternoon"), aes(x = Glucose)) +
 #### Outliers
 
 \
-En el siguiente grafico se identifican ciertas tomas de glucosa que se considerarian outliers.
+En el siguiente gráfico se identifican ciertas tomas de glucosa que se considerarian outliers.
 Sin embargo, no son datos erroneos ya que es posible que los pacientes tengan valores de glucosa muy altos o muy bajos.
 Además, representan información importante para identificar a los pacientes vulnerables a diabetes.
 \
@@ -369,7 +371,7 @@ ggplotly(ggplot(oximetry, aes(y = SpO2)) +
 
 \
 
-En el siguiente grafico se puede observar que hay algunos pacientes con una frecuencia cardiaca muy alta (más de 110)
+En el siguiente gráfico se puede observar que hay algunos pacientes con una frecuencia cardiaca muy alta (más de 110)
 y esto puede tener relación con problemas de posible diabetes ya que la hipoglusemia puede causar taquicardia.
 
 \
@@ -386,11 +388,8 @@ ggplotly(ggplot(oximetry, aes(y = HeartRate)) +
 
 #### Transformación
 
-\
-
-Se eliminan los outliers de las muestras de oximetria segun los analisis anteriores.
-
-\
+Segun los análisis de los boxplot de oximetría, no se evidencian outliers 
+por lo cual solo se valida el formato de la fecha. 
 
 ```{r}
 oximetry <- oximetry %>%
@@ -421,28 +420,19 @@ bloodPressure %>%
 ```{r}
 kable(summary(bloodPressure)) %>% kable_styling()
 ```
+
+
 #### Distribución
-
-```{r}
-ggplotly(ggplot(bloodPressure, aes(x = AvBloodPressure)) +
-  geom_histogram(binwidth = 10,color="#0A2F35", fill="#12492F", alpha=0.7) +
-  labs(x = "Presión arterial", y = "Frecuencia") +
-  theme_clean() +
-  ggtitle("Distribución de presion arterial"))
-
-```
 
 ```{r}
 ggplotly(ggplot(bloodPressure, aes(x = Systolic)) +
            geom_histogram(binwidth = 10,color="#0A2F35", fill="#12492F", alpha=0.7) +
            labs(x = "Systolic", y = "Frecuencia") +
            theme_clean() +
+           geom_vline(xintercept = 120, color = "red", linetype = "dashed", size = 1, show.legend = TRUE) +
            ggtitle("Distribución de Systolic"))
 
 ```
-
-
-
 
 
 ```{r}
@@ -450,6 +440,7 @@ ggplotly(ggplot(bloodPressure, aes(x = Diastolic)) +
            geom_histogram(binwidth = 10,color="#0A2F35", fill="#12492F", alpha=0.7) +
            labs(x = "Diastolic", y = "Frecuencia") +
            theme_clean() +
+           geom_vline(xintercept = 80, color = "red", linetype = "dashed", size = 1, show.legend = TRUE) +
            ggtitle("Distribución de Diastolic"))
 
 ```
@@ -525,7 +516,7 @@ ggplotly(ggplot(bloodPressure, aes(y = Diastolic)) +
 
 \
 
-En el siguiente grafico se puede observar que apesar que hay algunas tomas preocupantes, se encuentran dentro del rango normal en la distribución de los datos.
+En el siguiente gráfico se puede observar que apesar que hay algunas tomas preocupantes, se encuentran dentro del rango normal en la distribución de los datos.
 Sin embargo, hay un paciente con una presión arterial de 0 lo cual es imposible y se considera un outlier.
 
 
@@ -546,7 +537,7 @@ ggplotly(ggplot(bloodPressure, aes(y = AvBloodPressure)) +
 \
 
 La grafica de la frecuencia cardiaca muestra que hay algunos pacientes con una frecuencia cardiaca muy alta en comparación a las demás muestras(más de 125),
-pero como se mencionó en los graficos anteriores, la hipoglusemia puede causar taquicardia y no se consideran outliers.
+pero como se mencionó en los gráficos anteriores, la hipoglusemia puede causar taquicardia y no se consideran outliers.
 
 Sin embargo, tambien se encuentra una muestra con valor 0 lo cual es imposible y se considera un outlier.
 
@@ -565,15 +556,18 @@ ggplotly(ggplot(bloodPressure, aes(y = HeartRate)) +
 
 #### Transformación
 
-Seguún los análisis en los graficos anteriores, se identificaron tomas de presión arterial sistólica, diastólica y media en 0.
+Seguún los análisis en los gráficos anteriores, se identificaron tomas de presión arterial sistólica, diastólica y media en 0.
 
 ```{r}
 bloodPressure %>% filter(Systolic == 0 | Diastolic == 0 | AvBloodPressure == 0 | HeartRate == 0)
 ```
 \
 
-Para los 4 graficos anteriores, se identifica que el outlier es el mismo paciente. Por lo cual se decide eliminar esa toma para ese paciente del dataset
+Para los 4 gráficos anteriores, se identifica que el outlier es el mismo paciente. Por lo cual se decide eliminar esa toma para ese paciente del dataset
 ya que podría deberse a un error de medición o un error al ingresar los datos.
+
+Tambien se identifica el campo AvBloodPreasure que es el promedio de la preción 
+arterial, no tiene el valor correcto por lo cual se recalcula. 
 
 \
 
@@ -583,7 +577,9 @@ bloodPressure <- bloodPressure %>% filter(Systolic != 0 | Diastolic != 0 | AvBlo
 
 ```{r}
 bloodPressure <- bloodPressure %>%
-    mutate(Date = parse_date_time(Date, orders = "mdy HM"))
+    mutate(Date = parse_date_time(Date, orders = "mdy HM")) %>%
+    mutate(AvBloodPressure = (Systolic + Diastolic) / 2) %>%
+    filter(HeartRate > 0)
 ```
 
 ### IMC
@@ -663,16 +659,22 @@ ggplotly(ggplot(imc, aes(y = Height)) +
 
 ```{r}
 imc <- imc %>%
-    mutate(Date = parse_date_time(Date, orders = "mdy HM"))
+    mutate(Date = parse_date_time(Date, orders = "mdy HM")) %>%
+    # todo: argumentar estos filtros
+    filter(Height < 3) %>%
+    filter(Weight > 15) %>%
+    filter(IMC > 0)
 ```
 
-### Union de tablas
+### Union de datasets
 
 ```{r message=FALSE, warning=FALSE}
 diabetes <- glucose %>%
   inner_join(oximetry, by = c("Patient", "Date")) %>%
   inner_join(imc, by = c("Patient", "Date")) %>%
-  inner_join(bloodPressure, by = c("Patient", "Date"))
+  inner_join(bloodPressure, by = c("Patient", "Date")) %>%
+  mutate(HeartRate = (HeartRate.x + HeartRate.y) / 2) %>%
+  select(-HeartRate.x, -HeartRate.y)
 
 ```
 
@@ -682,7 +684,7 @@ diabetes <- glucose %>%
 ```{r}
 diabetes <- diabetes %>%
     mutate(Date = as.numeric(Date)) %>%
-    select(-Patient, -IsMorning)
+    select(-Patient, -IsMorning) 
 
 diabetes_scaled <-  diabetes %>%
     scale() 
@@ -700,44 +702,86 @@ diabetes_scaled %>%
 
 ### PCA
 
+Se aplica la funcion prcomp para determinar los componenten principales 
+del dataset.
+
+
 ```{r}
 PCA <- prcomp(diabetes_scaled)
 ```
 
-```{r}
-fviz_eig(PCA)
-```
+
+La función fviz_cos2 tiene como objetivo visualizar las contribuciones de las variables originales a los componentes principales generados por el PCA.
 
 ```{r}
-fviz_cos2(PCA, choice = "var", axes = 1:2)
-biplot(PCA)
+ggplotly(fviz_cos2(PCA, choice = "var", axes = 1:2))
 ```
 
+Según el grafico, las variables IMC, peso y altura son las más importantes para explicar la variabilidad de los datos. 
 
 ## Modelado Clustering
 
-### K-means
+### Determinar numero de clusters 
+
+La función fviz_nbclust permite determinar el numero optimo 
+de clusters en un proceso de clustering utilizando diferentes métodos de evaluación de clústeres, como el método el método de la silueta (silhouette).
+
+
+```{r message=FALSE, warning=FALSE}
+ggplotly(fviz_nbclust(diabetes_scaled, kmeans, method = "silhouette", k.max = 10))
+```
+
+### K- means
+
+Según lo sugiere el grafico anterior, el numero de clusters optimos es **2**
+por lo cual se configura el parámetro **k** con dicho valor. 
 
 ```{r}
 model <- kmeans(diabetes_scaled, 2, iter.max = 100, algorithm = "Lloyd")
-diabetes_with_clusters <- cbind(diabetes, Cluster = factor(model$cluster))
-diabetes_scaled_with_clusters <- cbind(diabetes_scaled, Cluster = factor(model$cluster))
-
 ```
+
+### Asignación de clusters 
+
+Se asignan los clusters determinados por el modelo no supervidado a los diferentes 
+pacientes del dataset. 
+
+```{r}
+diabetes_with_clusters <- cbind(diabetes, Cluster = factor(model$cluster))
+```
+
 
 ### Evaluación Clustering
 
+El coeficiente de varianza explicada es una medida de la proporción de la varianza total de los datos que se explica por los clusters. Un coeficiente de varianza explicada alto indica que los clusters explican una gran parte de la variabilidad de los datos.
+
+> coeficiente de varianza explicada = (varianza entre clusters) / (varianza total)
+
 ```{r}
-silhouette_score <- silhouette(model$cluster, dist(diabetes_with_clusters))
-plot(silhouette_score)
+model$betweenss / model$tot.withinss
 ```
 
 ## Selección de grupo vulnerable
+
+\ 
+
+Uno de los principales factores de diabetes es el sobre peso, 
+ya que gracias a ello, el cuerpo genera resistencia a la insulina 
+lo que conduce a un aumento en los niveles de azúcar en sangre.
+
+Por lo cual, el grupo que contenga el mayor indice de sobre peso, 
+será el seleccionado como el grupo vulnerable. 
+
+El limite entre sobre peso y obesidad es 30. Por lo cual, 
+el grupo que acumule más pacientes superior a este rango, 
+indicará que ahí se encuentran los pacientes vulnerables a diabetes. 
+
+Según el siguiente gráfico, el grupo vulnerable es el 2. 
 
 ```{r message=FALSE, warning=FALSE}
 ggplotly(ggplot(as.data.frame(diabetes_with_clusters), aes(x = IMC, fill = Cluster)) +
   geom_histogram(color = "white") +
   facet_wrap(~Cluster) +
+  geom_vline(xintercept = 30, color = "red", linetype = "dashed", size = 1, show.legend = TRUE) +
   ggtitle("K-Means Clustering en Componentes Principales"))
 
 ```

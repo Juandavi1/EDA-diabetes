@@ -1,23 +1,59 @@
-#library(devtools)
-#install_github("kassambara/factoextra")
+# Verifica si el paquete "tidyverse" está instalado, y si no, instálalo.
+if (!require(tidyverse)) {
+  install.packages("tidyverse")
+}
 
+# Repite este proceso para otros paquetes
+if (!require(ggplot2)) {
+  install.packages("ggplot2")
+}
 
-r = getOption("repos")
-r["CRAN"] = "http://cran.us.r-project.org"
-options(repos = r)
-install.packages("tidyverse")
-install.packages("ggplot2")
-install.packages("ggcorrplot")
-install.packages("patchwork")
-install.packages("caret")
-install.packages("ggthemes")
-install.packages("Metrics")
-install.packages("GGally")
-install.packages("shiny")
-install.packages("kableExtra")
-install.packages("plotly")
-install.packages("rpart.plot")
+if (!require(ggcorrplot)) {
+  install.packages("ggcorrplot")
+}
 
+if (!require(patchwork)) {
+  install.packages("patchwork")
+}
+
+if (!require(caret)) {
+  install.packages("caret")
+}
+
+if (!require(ggthemes)) {
+  install.packages("ggthemes")
+}
+
+if (!require(Metrics)) {
+  install.packages("Metrics")
+}
+
+if (!require(GGally)) {
+  install.packages("GGally")
+}
+
+if (!require(shiny)) {
+  install.packages("shiny")
+}
+
+if (!require(kableExtra)) {
+  install.packages("kableExtra")
+}
+
+if (!require(plotly)) {
+  install.packages("plotly")
+}
+
+if (!require(rpart.plot)) {
+  install.packages("rpart.plot")
+}
+
+if (!require(fpc)) {
+  install.packages("fpc")
+  library(fpc)
+}
+
+# Luego, carga los paquetes
 library(rpart.plot)
 library(rpart)
 library(plotly)

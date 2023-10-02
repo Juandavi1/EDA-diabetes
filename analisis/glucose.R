@@ -5,6 +5,7 @@
 # El rango de glucosa en sangre diabético es superior a 126 mg/dL. No hay datos del gráfico dentro de este rango.
 glucose <- read_csv("data/glucose.csv")
 
+
 head(glucose)
 
 # total de pacientes
@@ -67,4 +68,8 @@ as.Date(d)
 # total de fechas que no cumplen con el formato
 sum(is.na(as.numeric(as.Date(d))))
 
+
+imc <- imc %>%
+  mutate(Date = parse_date_time(Date, orders = "mdy HM")) %>%
+  filter(Height < 3)
 
