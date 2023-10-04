@@ -16,6 +16,8 @@ output:
         highlight: kate
         df_print: paged
         code_folding: show
+editor_options: 
+  chunk_output_type: console
 ---
 ```{r setup, include=FALSE}
 source("deps.r")
@@ -87,8 +89,19 @@ entender a qué se refiere cada variable.
 La glucosa es el azúcar que el cuerpo utiliza como energía. Cuando los niveles de glucosa en sangre son altos, puede ser un signo de diabetes.
 
 ```{r message=FALSE, warning=FALSE}
-glucose <- read_csv("data/glucose.csv")
+glucose <- read_csv("data/glucose.csv") %>%
+          filter(Patient != 81)
 glucose
+
+a <- glucose %>% 
+  select(Patient) %>%
+  group_by(Patient) %>%
+  summarise(
+    n=n()
+  ) %>% 
+  group_by(n) 
+
+table(a$n)
 ```
 
 > Según los datos observados en la tabla, se cuenta con la toma de glucosa de pacientes, la fecha de la toma, el valor de la glucosa y el identificador del paciente.
@@ -98,8 +111,10 @@ glucose
 La oximetría es una técnica para medir la cantidad de oxígeno en la sangre de una persona, generalmente a través de un dispositivo llamado oxímetro de pulso.
 Proporciona un porcentaje de saturación de oxígeno en la sangre, lo que es útil para evaluar la función respiratoria y la salud en general.
 ```{r}
-oximetry <- read_csv("data/Oximetry.csv", col_types = cols())
-oximetry
+oximetry <- read_csv("data/Oximetry.csv", col_types = cols()) %>%
+  filter(Patient != 81)
+
+
 ```
 > Según los datos observados en la tabla, se cuenta con la toma de oximetría de pacientes con la fecha de la toma, y el identificador del paciente
 además de la toma de lpm (latidos por minuto).
@@ -111,8 +126,10 @@ La presión arterial es la fuerza ejercida por la sangre contra las paredes de l
 __La presión arterial normal se considera que es inferior a 120/80 mm Hg. Si la presión arterial es demasiado alta o demasiado baja, puede ser un signo de problemas de salud.__
 
 ```{r}
-bloodPressure <- read_csv("data/bloodPressure.csv", col_types = cols())
+bloodPressure <- read_csv("data/bloodPressure.csv", col_types = cols()) %>%
+  filter(Patient!=81)
 bloodPressure
+
 ```
 > Según los datos observados en la tabla, se cuenta con la toma de presión arterial de pacientes con la fecha de la toma,
 la presion arterial sistólica (Systolic) y la presión arterial diastólica (Diastolic) ademas de la presión arterial media (Mean).
@@ -125,7 +142,9 @@ El indice de masa corportal es una medida de la grasa corporal basada en la altu
 **El IMC es una herramienta útil para evaluar el riesgo de una persona de desarrollar problemas de salud relacionados con el peso, como enfermedades cardíacas, diabetes y algunos tipos de cáncer.**
 \
 ```{r}
-imc <- read_csv("data/Weight_Height.csv", col_types = cols())
+imc <- read_csv("data/Weight_Height.csv", col_types = cols()) %>%
+  filter(Patient!=81)
+
 imc
 ```
 > Según los datos observados en la tabla, se cuenta con la toma de peso y altura de los pacientes, la fecha de la toma, y el calculo del IMC.
@@ -225,6 +244,8 @@ ggplotly(ggplot(glucose %>% filter(IsMorning=="Afternoon"), aes(x = Glucose)) +
            geom_vline(xintercept = afternoon_critir_value, color = "red", linetype = "dashed", size = 1, show.legend = TRUE) +
            theme_fivethirtyeight())
 
+
+glucose <- glucose %>% select(-IsMorning)
 ```
 
 #### Outliers
@@ -578,8 +599,8 @@ bloodPressure <- bloodPressure %>% filter(Systolic != 0 | Diastolic != 0 | AvBlo
 ```{r}
 bloodPressure <- bloodPressure %>%
     mutate(Date = parse_date_time(Date, orders = "mdy HM")) %>%
-    #mutate(AvBloodPressure = (Systolic + Diastolic) / 2) %>%
     filter(HeartRate > 0)
+
 ```
 
 ### IMC
@@ -678,10 +699,9 @@ se será excluido.
 diabetes <- glucose %>%
   inner_join(oximetry, by = c("Patient", "Date")) %>%
   inner_join(imc, by = c("Patient", "Date")) %>%
-  inner_join(bloodPressure, by = c("Patient", "Date")) %>%
-  mutate(HeartRate = (HeartRate.x + HeartRate.y) / 2) %>%
-  select(-HeartRate.x, -HeartRate.y)
+  inner_join(bloodPressure, by = c("Patient", "Date")) 
 
+nrow(diabetes)
 ```
 
 
@@ -693,45 +713,70 @@ clustering utilizan las distancias de los datos para lograr agruparlos.
 ```{r}
 diabetes <- diabetes %>%
     mutate(Date = as.numeric(Date)) %>%
-    select(-Patient, -IsMorning) 
+    mutate(HeartRate = (HeartRate.x + HeartRate.y) / 2) %>%
+    mutate(AvBloodPressure = Diastolic + (1/3) * (Systolic - Diastolic)) %>%
+    select(-Patient, -Height, -Weight, -HeartRate.x, -HeartRate.y, -Systolic ,-Diastolic)
+    #select(-Patient, -HeartRate.x, -HeartRate.y)
 ```
 
 Normalización de datos 
 
 ```{r}
-preProcessDiabetes <- preProcess(diabetes, method = c("center", "scale"))
-diabetes_scaled <- predict(preProcessDiabetes,diabetes)
+preProcessDiabetes <- preProcess(diabetes, method = c("scale"))
+scaled <- predict(preProcessDiabetes,diabetes)
+diabetes_scaled <- as.data.frame(scaled)
 ```
 
-
-### Correlación
-
-
-```{r}
-diabetes_scaled %>%
-  cor() %>%
-  ggcorrplot() %>%
-  ggplotly()
-```
 
 ### PCA
 
-Se aplica la funcion prcomp para determinar los componenten principales 
-del dataset.
-
+Se aplica la funcion PCA para determinar los componenten principales del dataset.
+el valor ncp=3 es la cantidad de componentes principales que queremos calcular. 
 
 ```{r}
-PCA <- prcomp(diabetes_scaled)
+res.pca <- PCA(diabetes_scaled, graph=FALSE, ncp=3)
+```
+
+La función fviz_pca_var tiene como objetivo visualizar las contribuciones de las variables originales a los componentes principales generados por el PCA en su primera dimensión.
+
+```{r}
+fviz_pca_var(res.pca, col.var="contrib") +
+  scale_color_gradient2(low="blue", mid="white", high="red", midpoint=55) + 
+  theme_clean()
+
+```
+
+La tabla permite visualizar el total de las dimensiones con las diferentes contribuciones de cada variable.
+
+De la tabla acontinuación se presentan las conclusiones clave:
+
+En la priemra dimensión del análisis de PCA, los componentes Sp02, AvBloodPressure e IMC suman un 93.44458% del total de la varianza.
+En la segunda dimensión, los componentes Date y AvBloodPressure suman un 90.05333% del total de la varianza y por ultimo,
+En la tercera dimensión, los componentes Glucose, HeartRate y AvBloodPressure en conjunto representan aproximadamente el 93.48321% de la varianza total.
+
+Solo se tuvieron en cuenta las 3 variables más representativas dentro de cada dimensión basados en su varianza ya que la idea es reducir
+al maximo las dimensiones para lograr una mayor fácilidad al usuario al momento de la predicción al tener que ingresar menos valores. 
+
+Por otro lado, los mejores candidatos para el análisis son Glucose, AvBloodPressure, HeartRate en la tercera dimensión ya que representan 
+una mayor cantidad de la varianza total. 
+
+Además, apesar de que el IMC es un buen indicador de diabetes, no se tendrá en cuenta ya que en la diabetes tipo 1
+se cree que es ocacionada por factores genéticos y ambientales y no por el peso corporal. Lo cual permite que
+el modelo sea más generalizado y no se limite a un grupo de personas con un IMC alto.
+
+```{r}
+res.pca$var$contrib %>%
+  kable() %>%
+  kable_styling(full_width = F, position = "left")
 ```
 
 
-La función fviz_cos2 tiene como objetivo visualizar las contribuciones de las variables originales a los componentes principales generados por el PCA.
+Basados en el análisis anterior, se selección las variables correspondientes del dataset original.
 
 ```{r}
-ggplotly(fviz_cos2(PCA, choice = "var", axes = 1:2))
+diabetes_scaled <- diabetes_scaled %>% select(Glucose, AvBloodPressure, HeartRate) # res.pca$ind$coord #
 ```
 
-Según el grafico, las variables IMC, peso y altura son las más importantes para explicar la variabilidad de los datos. 
 
 ## Modelado Clustering
 
@@ -778,25 +823,20 @@ model$betweenss / model$tot.withinss
 
 \ 
 
-Uno de los principales factores de diabetes es el sobre peso, 
-ya que gracias a ello, el cuerpo genera resistencia a la insulina 
-lo que conduce a un aumento en los niveles de azúcar en sangre.
-
-Por lo cual, el grupo que contenga el mayor indice de sobre peso, 
+Uno de los principales factores de diabetes los niveles de azúcar en sangre,
+Por lo cual, el grupo que contenga el mayor indice de pacientes con glucosa alta, 
 será el seleccionado como el grupo vulnerable. 
 
-El limite entre sobre peso y obesidad es 30. Por lo cual, 
-el grupo que acumule más pacientes superior a este rango, 
-indicará que ahí se encuentran los pacientes vulnerables a diabetes. 
-
-Según el siguiente gráfico, el grupo vulnerable es el 2. 
+El limite de lo que se considera una glucosa alta es de 100, por lo cual -
+el grupo del cluster 1 que agrupa más pacientes con esta condición, 
+será el grupo vulnerable a diabetes. 
 
 ```{r message=FALSE, warning=FALSE}
-ggplotly(ggplot(as.data.frame(diabetes_with_clusters), aes(x = IMC, fill = Cluster)) +
-  geom_histogram(color = "white") +
-  facet_wrap(~Cluster) +
-  geom_vline(xintercept = 30, color = "red", linetype = "dashed", size = 1, show.legend = TRUE) +
-  ggtitle("K-Means Clustering en Componentes Principales"))
+ggplotly(ggplot(as.data.frame(diabetes_with_clusters), aes(x=SpO2, color=Cluster)) +
+  geom_histogram() +
+  facet_grid(~Cluster) + 
+  geom_vline(xintercept = 100, color = "red", linetype = "dashed", size = 1, show.legend = TRUE) +
+  ggtitle("Agrupación de la glucosa en los pacientes"))
 
 ```
 
@@ -847,8 +887,8 @@ accuracy(test$Cluster, y_pred_cluster)
 ```
 
 ```{r}
-cf <- confusionMatrix(test$Cluster, y_pred_cluster)
-fourfoldplot(as.table(cf),color=c("red","green"),main = "Confusion Matrix")
+#cf <- confusionMatrix(test$Cluster, y_pred_cluster)
+#fourfoldplot(as.table(cf),color=c("red","green"),main = "Confusion Matrix")
 ```
 
 ### Exportar 

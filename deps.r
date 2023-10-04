@@ -53,9 +53,15 @@ if (!require(fpc)) {
   library(fpc)
 }
 
+if (!require(FactoMineR)) {
+  install.packages("FactoMineR")
+  library(FactoMineR)
+}
+
 # Luego, carga los paquetes
 library(rpart.plot)
 library(rpart)
+library(dplyr)
 library(plotly)
 library(kableExtra)
 library(tidyverse)
@@ -71,3 +77,4 @@ library(shiny)
 library(factoextra)
 library(lubridate)
 library(cluster)
+

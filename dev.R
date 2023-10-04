@@ -59,7 +59,9 @@ diabetes <- glucose %>%
   inner_join(bloodPressure, by = c("Patient", "Date")) %>%
   inner_join(imc, by = c("Patient", "Date")) %>%
   select(-Patient, -is_morning) %>%
-  select(AvBloodPressure, IMC, Systolic, Weight)
+  mutate(HeartRate = (HeartRate.x + HeartRate.y) / 2) %>%
+  mutate(AvBloodPressure = (Systolic + Diastolic) / 2) %>%
+  select(AvBloodPressure, IMC, Systolic, Weight, Date, Glucose)
 
 diabetes <- diabetes %>%
   mutate(Date = as.numeric(Date))
@@ -67,9 +69,10 @@ diabetes <- diabetes %>%
 ggplotly(ggcorrplot(cor(diabetes)))
 
 
+
 wss <- 0
 for (i in 1:10) {
-  km.iris <- kmeans(scale(diabetes %>% select(AvBloodPressure, IMC, Systolic, Weight)), centers = i, nstart=25, iter.max = 50)
+  km.iris <- kmeans(scale(diabetes), centers = i, nstart=25, iter.max = 100, algorithm = "MacQueen")
   wss[i] <- km.iris$tot.withinss
 }
 
@@ -78,7 +81,7 @@ plot(1:10, wss, type = "b",
      ylab = "Suma de cuadrados entre grupos")
 
 
-model <- kmeans(scale(diabetes), 4, iter.max = 100, algorithm = "Lloyd")
+model <- kmeans(scale(diabetes), 2, iter.max = 100, algorithm = "Hartigan-Wong", )
 diabetes_with_clusters <- cbind(diabetes, Cluster = factor(model$cluster))
 
 
@@ -98,7 +101,7 @@ ggplotly(fviz_nbclust(scale(diabetes), kmeans, method = "silhouette", k.max = 10
 
 class(model %>% select(betweenss))
 
-ggplotly(ggplot(as.data.frame(diabetes_with_clusters), aes(x = IMC, fill = Cluster)) +
+ggplotly(ggplot(as.data.frame(diabetes_with_clusters), aes(x = Glucose, fill = Cluster)) +
            geom_histogram(color = "white") +
            facet_wrap(~Cluster) +
            geom_vline(xintercept = 30, color = "red", linetype = "dashed", size = 1, show.legend = TRUE) +

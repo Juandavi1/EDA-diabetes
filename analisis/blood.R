@@ -66,3 +66,7 @@ a <- blood %>%
   select(-Patient, -Date, -AvBloodPressure, -Diastolic, -Systolic)
 
 ggplotly(ggcorrplot(cor(a)))
+
+b <- preProcess(a, method = c("center", "scale"))
+
+predict(b,a)
