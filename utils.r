@@ -21,7 +21,7 @@ to_seconds <- function(dates) {
   }
 
   # Devolver el vector de segundos del día
-  return(dates)
+  return(as.numeric(dates))
 }
 
 is_morning <- function(dates) {

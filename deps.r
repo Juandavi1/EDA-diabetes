@@ -1,4 +1,7 @@
-# Verifica si el paquete "tidyverse" está instalado, y si no, instálalo.
+r = getOption("repos")
+r["CRAN"] = "http://cran.us.r-project.org"
+options(repos = r)
+
 if (!require(tidyverse)) {
   install.packages("tidyverse")
 }
@@ -57,6 +60,12 @@ if (!require(FactoMineR)) {
   install.packages("FactoMineR")
   library(FactoMineR)
 }
+
+if (!require(kernlab)) {
+  install.packages('kernlab')
+  library(kernlab)
+}
+
 
 # Luego, carga los paquetes
 library(rpart.plot)

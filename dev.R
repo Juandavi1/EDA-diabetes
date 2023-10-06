@@ -21,8 +21,15 @@ library(factoextra)
 library(rpart.plot)
 library(rpart)
 
+if (!require(kernlab)) {
+  install.packages('kernlab')
+  library(kernlab)
+}
+
 # Configuración de la visualización de datos
 theme_set(theme_minimal(base_size = 18))
+
+setwd(getwd())
 
 # Cargar datos
 glucose <- read_csv("data/glucose.csv")
@@ -58,21 +65,73 @@ diabetes <- glucose %>%
   inner_join(oximetry, by = c("Patient", "Date")) %>%
   inner_join(bloodPressure, by = c("Patient", "Date")) %>%
   inner_join(imc, by = c("Patient", "Date")) %>%
-  select(-Patient, -is_morning) %>%
-  mutate(HeartRate = (HeartRate.x + HeartRate.y) / 2) %>%
-  mutate(AvBloodPressure = (Systolic + Diastolic) / 2) %>%
-  select(AvBloodPressure, IMC, Systolic, Weight, Date, Glucose)
+  select(-Patient, -is_morning, -Date) 
+  #mutate(HeartRate = (HeartRate.x + HeartRate.y) / 2) %>%
+  #mutate(AvBloodPressure = (Systolic + Diastolic) / 2) %>%
+  #select(AvBloodPressure, IMC, Systolic, Weight, Date, Glucose)
 
 diabetes <- diabetes %>%
-  mutate(Date = as.numeric(Date))
+  mutate(Date = as.numeric(Date)) %>%
+  scale() 
 
-ggplotly(ggcorrplot(cor(diabetes)))
+
+## --
+
+# Cargar bibliotecas
+library(kernlab)     # Para KPCA
+library(caret)       # Para partición de datos y entrenamiento de modelos
+library(rpart)       # Para árbol de decisión
+
+# Cargar el conjunto de datos (asumiendo que se llama "data")
+X <-   as.data.frame(diabetes)
+
+# Separar las características de la variable objetivo (IMC en este caso)
+
+# Paso 1: Realizar KPCA para reducir la dimensionalidad
+kpca <- kpca(~., data = X, kernel = "rbfdot")
+
+# Transformar los datos originales a las nuevas características KPCA
+X_kpca <- as.data.frame(predict(kpca, X))
+
+X_kpca$V1
+
+# Paso 2: Realizar K-Means para agrupar los datos
+num_clusters <- 3
+kmeans_result <- kmeans(X_kpca, centers = num_clusters)
+
+# Paso 3: Agregar los resultados de K-Means al conjunto de datos original
+diabetes$Cluster <- as.factor(kmeans_result$cluster)
+
+# Paso 4: Dividir los datos en conjuntos de entrenamiento y prueba
+set.seed(123)
+diabetes <- as.data.frame(diabetes)
+train_indices <- createDataPartition(diabetes$Cluster, p = 0.7, list = FALSE)
+train_data <- diabetes[train_indices, ]
+test_data <- diabetes[-train_indices, ]
+
+colnames(diabetes)
+
+# Paso 5: Construir un árbol de decisión usando los grupos K-Means como la variable objetivo
+tree_model <- rpart(Cluster ~ ., data = train_data, method = "class")
+
+# Hacer predicciones en el conjunto de prueba
+predictions <- predict(tree_model, test_data, type = "class")
+
+# Evaluar la precisión del modelo
+confusion_matrix <- confusionMatrix(predictions, test_data$Cluster)
+print(confusion_matrix)
 
 
+
+## --
+ggplotly(fviz_nbclust(b, kmeans, method = "silhouette", k.max = 10))
+
+model <- kmeans(b, 2, iter.max = 100, algorithm = "Hartigan-Wong", )
+model$betweenss / model$tot.withinss
 
 wss <- 0
 for (i in 1:10) {
-  km.iris <- kmeans(scale(diabetes), centers = i, nstart=25, iter.max = 100, algorithm = "MacQueen")
+  km.iris <- kmeans(b, centers = i, nstart=25, iter.max = 100, algorithm = "MacQueen")
   wss[i] <- km.iris$tot.withinss
 }
 
@@ -81,7 +140,7 @@ plot(1:10, wss, type = "b",
      ylab = "Suma de cuadrados entre grupos")
 
 
-model <- kmeans(scale(diabetes), 2, iter.max = 100, algorithm = "Hartigan-Wong", )
+model <- kmeans(scale(diabetes), 4, iter.max = 100, algorithm = "Hartigan-Wong", )
 diabetes_with_clusters <- cbind(diabetes, Cluster = factor(model$cluster))
 
 

@@ -89,19 +89,8 @@ entender a qué se refiere cada variable.
 La glucosa es el azúcar que el cuerpo utiliza como energía. Cuando los niveles de glucosa en sangre son altos, puede ser un signo de diabetes.
 
 ```{r message=FALSE, warning=FALSE}
-glucose <- read_csv("data/glucose.csv") %>%
-          filter(Patient != 81)
+glucose <- read_csv("data/glucose.csv") 
 glucose
-
-a <- glucose %>% 
-  select(Patient) %>%
-  group_by(Patient) %>%
-  summarise(
-    n=n()
-  ) %>% 
-  group_by(n) 
-
-table(a$n)
 ```
 
 > Según los datos observados en la tabla, se cuenta con la toma de glucosa de pacientes, la fecha de la toma, el valor de la glucosa y el identificador del paciente.
@@ -110,11 +99,9 @@ table(a$n)
 
 La oximetría es una técnica para medir la cantidad de oxígeno en la sangre de una persona, generalmente a través de un dispositivo llamado oxímetro de pulso.
 Proporciona un porcentaje de saturación de oxígeno en la sangre, lo que es útil para evaluar la función respiratoria y la salud en general.
-```{r}
-oximetry <- read_csv("data/Oximetry.csv", col_types = cols()) %>%
-  filter(Patient != 81)
-
-
+```{r }
+oximetry <- read_csv("data/Oximetry.csv", col_types = cols()) 
+oximetry
 ```
 > Según los datos observados en la tabla, se cuenta con la toma de oximetría de pacientes con la fecha de la toma, y el identificador del paciente
 además de la toma de lpm (latidos por minuto).
@@ -126,8 +113,7 @@ La presión arterial es la fuerza ejercida por la sangre contra las paredes de l
 __La presión arterial normal se considera que es inferior a 120/80 mm Hg. Si la presión arterial es demasiado alta o demasiado baja, puede ser un signo de problemas de salud.__
 
 ```{r}
-bloodPressure <- read_csv("data/bloodPressure.csv", col_types = cols()) %>%
-  filter(Patient!=81)
+bloodPressure <- read_csv("data/bloodPressure.csv", col_types = cols())
 bloodPressure
 
 ```
@@ -142,9 +128,7 @@ El indice de masa corportal es una medida de la grasa corporal basada en la altu
 **El IMC es una herramienta útil para evaluar el riesgo de una persona de desarrollar problemas de salud relacionados con el peso, como enfermedades cardíacas, diabetes y algunos tipos de cáncer.**
 \
 ```{r}
-imc <- read_csv("data/Weight_Height.csv", col_types = cols()) %>%
-  filter(Patient!=81)
-
+imc <- read_csv("data/Weight_Height.csv", col_types = cols())
 imc
 ```
 > Según los datos observados en la tabla, se cuenta con la toma de peso y altura de los pacientes, la fecha de la toma, y el calculo del IMC.
@@ -631,6 +615,7 @@ p <- p <- ggplot(imc, aes(x = IMC)) +
 
 ggplotly(p)
 ```
+
 #### Correlación
 
 ```{r}
@@ -697,9 +682,10 @@ se será excluido.
 
 ```{r message=FALSE, warning=FALSE}
 diabetes <- glucose %>%
+  inner_join(bloodPressure, by = c("Patient", "Date")) %>%
   inner_join(oximetry, by = c("Patient", "Date")) %>%
   inner_join(imc, by = c("Patient", "Date")) %>%
-  inner_join(bloodPressure, by = c("Patient", "Date")) 
+  arrange(Patient, Date) 
 
 nrow(diabetes)
 ```
@@ -713,13 +699,36 @@ clustering utilizan las distancias de los datos para lograr agruparlos.
 ```{r}
 diabetes <- diabetes %>%
     mutate(Date = as.numeric(Date)) %>%
-    mutate(HeartRate = (HeartRate.x + HeartRate.y) / 2) %>%
-    mutate(AvBloodPressure = Diastolic + (1/3) * (Systolic - Diastolic)) %>%
-    select(-Patient, -Height, -Weight, -HeartRate.x, -HeartRate.y, -Systolic ,-Diastolic)
-    #select(-Patient, -HeartRate.x, -HeartRate.y)
+    mutate(HeartRate = (HeartRate.x + HeartRate.y) / 2) 
 ```
 
-Normalización de datos 
+```{r}
+ggplotly(ggcorrplot(cor(diabetes), title = "Correlacion general"))
+```
+
+Las variables con alta correlación pueden indicar varias cosas. Redundancia 
+en la información, problemas de colinealidad y overfitting.
+En general el modelo puede intentar ajustarse demasiado a la relación negativa y/o positiva, 
+lo que puede llevar a la falta de generalización.
+
+Debido a esto, se proceden a eliminar las variables con alta correlación. 
+
+Se omiten campos innecesarios como el Id del paciente y las variables que ya se encuentra resumidas en otras variables. 
+
+```{r}
+diabetes <- diabetes %>%  
+  # La presión arterial promedio se encuentra mal calculada por lo que se realiza la operación nuevamente. 
+  # mutate(AvBloodPressure = Diastolic + (1/3) * (Systolic - Diastolic)) %>%
+  
+  # Eliminación de variables con alta correlación
+  select(-Patient, -HeartRate.x, -HeartRate.y, -Weight , -Height, -Systolic, -Diastolic, -Date)
+```
+
+```{r}
+ggplotly(ggcorrplot(cor(diabetes), title = "Correlacion general"))
+```
+
+### Estandarización 
 
 ```{r}
 preProcessDiabetes <- preProcess(diabetes, method = c("scale"))
@@ -730,51 +739,28 @@ diabetes_scaled <- as.data.frame(scaled)
 
 ### PCA
 
-Se aplica la funcion PCA para determinar los componenten principales del dataset.
-el valor ncp=3 es la cantidad de componentes principales que queremos calcular. 
+El objetivo de usar PCA en este punto de debe a la capacidad que tiene la función 
+para reducir la complejidad de los datos. PCA reduce la dimensionalidad del conjunto de datos original al transformarlo en un espacio de características de menor dimensión.
+
+Esto puede facilitar el modelo de clustering y mejorar la precisión.   
 
 ```{r}
-res.pca <- PCA(diabetes_scaled, graph=FALSE, ncp=3)
+res.pca <- PCA(diabetes_scaled, graph = FALSE, ncp = 2)
 ```
 
 La función fviz_pca_var tiene como objetivo visualizar las contribuciones de las variables originales a los componentes principales generados por el PCA en su primera dimensión.
+En el grafico se puede observar que las variables que más contribuyen a la primera dimensión son la glucosa y la presión arterial y la oximetría.
 
 ```{r}
 fviz_pca_var(res.pca, col.var="contrib") +
   scale_color_gradient2(low="blue", mid="white", high="red", midpoint=55) + 
   theme_clean()
-
 ```
 
-La tabla permite visualizar el total de las dimensiones con las diferentes contribuciones de cada variable.
-
-De la tabla acontinuación se presentan las conclusiones clave:
-
-En la priemra dimensión del análisis de PCA, los componentes Sp02, AvBloodPressure e IMC suman un 93.44458% del total de la varianza.
-En la segunda dimensión, los componentes Date y AvBloodPressure suman un 90.05333% del total de la varianza y por ultimo,
-En la tercera dimensión, los componentes Glucose, HeartRate y AvBloodPressure en conjunto representan aproximadamente el 93.48321% de la varianza total.
-
-Solo se tuvieron en cuenta las 3 variables más representativas dentro de cada dimensión basados en su varianza ya que la idea es reducir
-al maximo las dimensiones para lograr una mayor fácilidad al usuario al momento de la predicción al tener que ingresar menos valores. 
-
-Por otro lado, los mejores candidatos para el análisis son Glucose, AvBloodPressure, HeartRate en la tercera dimensión ya que representan 
-una mayor cantidad de la varianza total. 
-
-Además, apesar de que el IMC es un buen indicador de diabetes, no se tendrá en cuenta ya que en la diabetes tipo 1
-se cree que es ocacionada por factores genéticos y ambientales y no por el peso corporal. Lo cual permite que
-el modelo sea más generalizado y no se limite a un grupo de personas con un IMC alto.
+Se obtienen los valores de los componentes principales para cada paciente, los cuales serán utilizados para el clustering.
 
 ```{r}
-res.pca$var$contrib %>%
-  kable() %>%
-  kable_styling(full_width = F, position = "left")
-```
-
-
-Basados en el análisis anterior, se selección las variables correspondientes del dataset original.
-
-```{r}
-diabetes_scaled <- diabetes_scaled %>% select(Glucose, AvBloodPressure, HeartRate) # res.pca$ind$coord #
+diabetes_pca <- res.pca$ind$coord
 ```
 
 
@@ -787,7 +773,7 @@ de clusters en un proceso de clustering utilizando diferentes métodos de evalua
 
 
 ```{r message=FALSE, warning=FALSE}
-ggplotly(fviz_nbclust(diabetes_scaled, kmeans, method = "silhouette", k.max = 10))
+ggplotly(fviz_nbclust(diabetes_pca, kmeans, method = "silhouette", k.max = 10))
 ```
 
 ### K- means
@@ -796,8 +782,15 @@ Según lo sugiere el grafico anterior, el numero de clusters optimos es **2**
 por lo cual se configura el parámetro **k** con dicho valor. 
 
 ```{r}
-model <- kmeans(diabetes_scaled, 2, iter.max = 100, algorithm = "Lloyd")
+model <- kmeans(diabetes_pca, 2, iter.max = 100, algorithm = "Lloyd", nstart = 10)
 ```
+
+
+### Grafico del clustering
+```{r}
+fviz_cluster(model, diabetes_pca, ellipse.type = "norm")
+```
+
 
 ### Asignación de clusters 
 
@@ -823,20 +816,19 @@ model$betweenss / model$tot.withinss
 
 \ 
 
-Uno de los principales factores de diabetes los niveles de azúcar en sangre,
-Por lo cual, el grupo que contenga el mayor indice de pacientes con glucosa alta, 
-será el seleccionado como el grupo vulnerable. 
+Uno de los principales factores de diabetes es la obesidad ya que el exceso de grasa dificulta que la insulina funcione correctamente, lo que lleva a niveles altos de azúcar en la sangre y, finalmente, a la diabetes.
 
-El limite de lo que se considera una glucosa alta es de 100, por lo cual -
-el grupo del cluster 1 que agrupa más pacientes con esta condición, 
-será el grupo vulnerable a diabetes. 
+Por lo cual se decide seleccionar el grupo vulnerable a diabetes basado en el IMC de los pacientes.
+En el siguiente grafico se puede observar que el grupo 1 tiene un IMC más alto que el grupo 2.
+
+Tambien podriamos considerar la glucosa como un factor de selección pero el IMC es un factor más importante ya que la glucosa puede variar dependiendo de la hora del día en que se toma la muestra.
 
 ```{r message=FALSE, warning=FALSE}
-ggplotly(ggplot(as.data.frame(diabetes_with_clusters), aes(x=SpO2, color=Cluster)) +
+ggplotly(ggplot(as.data.frame(diabetes_with_clusters), aes(x=IMC, color=Cluster)) +
   geom_histogram() +
   facet_grid(~Cluster) + 
-  geom_vline(xintercept = 100, color = "red", linetype = "dashed", size = 1, show.legend = TRUE) +
-  ggtitle("Agrupación de la glucosa en los pacientes"))
+  geom_vline(xintercept = 30, color = "red", linetype = "dashed", size = 1, show.legend = TRUE) +
+  ggtitle("Agrupación de la glucosa en los pacientes")) 
 
 ```
 
@@ -846,6 +838,7 @@ ggplotly(ggplot(as.data.frame(diabetes_with_clusters), aes(x=SpO2, color=Cluster
 ### Split data
 
 ```{r}
+
 particion <- createDataPartition(diabetes_with_clusters$Cluster, p = 0.7, list = FALSE)
 train <- diabetes_with_clusters[particion, ]
 test <- diabetes_with_clusters[-particion, ]
@@ -854,8 +847,9 @@ test <- diabetes_with_clusters[-particion, ]
 ### Crear modelo 
 
 ```{r}
-tree_model <- rpart(Cluster ~ ., data = train, method = "class")
+tree_model <- rpart(Cluster ~ ., data = train, method = "class", control = rpart.control(maxdepth = 3, minsplit = 2))
 ```
+
 
 ### Arbol 
 
@@ -872,14 +866,13 @@ plotcp(tree_model)
 ### Predicción
 
 ```{r}
-y_pred <- predict(tree_model, newdata = test, type = "prob")
+y_pred <- predict(tree_model, newdata = test, type = "class")
 ```
 
 ### Evaluación
 
 ```{r}
-y_pred_cluster <- if_else(y_pred[,2] > 0.5, 2, 1)
-y_pred_cluster <- factor(y_pred_cluster, levels = levels(test$Cluster))
+y_pred_cluster <- factor(y_pred, levels = levels(test$Cluster))
 ```
 
 ```{r}
@@ -887,8 +880,8 @@ accuracy(test$Cluster, y_pred_cluster)
 ```
 
 ```{r}
-#cf <- confusionMatrix(test$Cluster, y_pred_cluster)
-#fourfoldplot(as.table(cf),color=c("red","green"),main = "Confusion Matrix")
+cf <- confusionMatrix(test$Cluster, y_pred_cluster)
+fourfoldplot(as.table(cf),color=c("red","green"),main = "Confusion Matrix")
 ```
 
 ### Exportar 
@@ -897,7 +890,10 @@ accuracy(test$Cluster, y_pred_cluster)
 saveRDS(tree_model, "diabetes.rds")
 ```
 
-
 ## Conclusiones
+
+Como conclusión se puede decir que el modelo de clustering logró identificar dos grupos de pacientes con características similares
+pero con diferentes niveles de riesgo de diabetes.
+
 
 ## Referencias
