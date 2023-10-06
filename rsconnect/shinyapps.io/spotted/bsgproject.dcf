@@ -1,0 +1,13 @@
+name: bsgproject
+title: bsgproject
+username: spotted
+account: spotted
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 10109843
+bundleId: 7771208
+url: https://spotted.shinyapps.io/bsgproject/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .idea/misc.xml|.idea/vcs.xml|.idea/workspace.xml|.RData|analisis.html|analisis.rmd|data/bloodPressure.csv|data/Glucose.csv|data/Oximetry.csv|data/Weight_Height.csv|deps.r|dev.R|index.html|proyecto_final.ipynb|utils.r

@@ -7,16 +7,13 @@
 #    http://shiny.rstudio.com/
 #
 
-install.packages("chatgpt")
-install.packages("shinycssloaders")
-
-Sys.setenv(OPENAI_API_KEY = "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")
+# don't worry about it! It have 1USD limit.
+Sys.setenv(OPENAI_API_KEY = "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")
 
 library(chatgpt)
 library(shiny)
 library(shinycssloaders)
 library(tidyverse)
-library(shinymaterial)
 
 
 setwd(getwd())
@@ -27,21 +24,24 @@ model <- readRDS("diabetes.rds")
 ui <- fluidPage(
 
     # Application title
-    titlePanel("Verifica tu vulnerabilidad a la biabetes."),
-
+    titlePanel("Ingresa los datos solicitados."),
+    
     # Sidebar with a slider input for number of bins 
     sidebarLayout(
         sidebarPanel(
-            numericInput(inputId = "peso", label = "ingresa tu peso", value = 5, min = 5, max = 200),
-            numericInput(inputId = "altura", label = "ingresa tu altura", value = 5, min = 1, max = 2),
+            numericInput(inputId = "IMC", label = "ingresa tu indice de masa corporal", value = 5, min = 5, max = 200),
+            numericInput(inputId = "Glucose", label = "ingresa tu ultima toma de glucosa", value = 5, min = 1, max = 2),
+            numericInput(inputId = "AvBloodPressure", label = "ingresa tu ultima toma de persión sanguinea ", value = 5, min = 1, max = 2),
+            numericInput(inputId = "SpO2", label = "ingresa tu ultima toma de oximetria", value = 5, min = 1, max = 2),
+            numericInput(inputId = "HeartRate", label = "ingresa tu ultima toma de frecuencia cardiaca", value = 5, min = 1, max = 2),
         ),
 
         # Show a plot of the generated distribution
         mainPanel(
+          h1("Predicción paciente vulnerable a diabetes."),
           shinycssloaders::withSpinner(
             textOutput("predict")
-          ),
-          plotOutput("distPlot")
+          )
         )
     )
 )
@@ -51,16 +51,23 @@ server <- function(input, output) {
 
     output$predict <- renderText({
       
-      suggestion <- ask_chatgpt("Actúa como doctor. Genera una sugerencia para tratar a una persona con un IMC de 30. La sugerencia ,de dos parrafos y 4 renglones, debe centrarse en el objetivo principal del tratamiento: reducir el peso corporal. Se lo estás diciendo a un paciente.")
-      suggestion
-      gsub("\\.", ".\n", suggestion)
+      prompt <- "Actúa como doctor. Genera algunas sugerencias para evitar la diabetes. La sugerencia debe ser corta y centrarse en el objetivo principal del tratamiento: reducir el riesgo a diabetes. Se lo estás diciendo a un paciente." 
+      suggestion <- ask_chatgpt(prompt)
       
-      # predict(model, newdata = data.frame(
-      #   IMC = 1,
-      #   Weight = 100,
-      #   Height = 100
-      # )
-      # )
+      cluster <- predict(model, newdata = data.frame(
+         IMC = input$IMC,
+         Glucose = input$Glucose,
+         AvBloodPressure = input$AvBloodPressure,
+         SpO2 = input$AvBloodPressure,
+         HeartRate = input$SpO2
+       ), type = "class"
+      )
+      
+      ifelse(
+        cluster == 1,
+        paste("Paciente con vulnerabilidad a diabetes. ", suggestion), 
+        paste("Paciente dentro de los parametros normales.", suggestion)
+      )
     })
 }
 

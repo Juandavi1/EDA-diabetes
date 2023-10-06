@@ -718,7 +718,7 @@ Se omiten campos innecesarios como el Id del paciente y las variables que ya se 
 ```{r}
 diabetes <- diabetes %>%  
   # La presión arterial promedio se encuentra mal calculada por lo que se realiza la operación nuevamente. 
-  # mutate(AvBloodPressure = Diastolic + (1/3) * (Systolic - Diastolic)) %>%
+  mutate(AvBloodPressure = Diastolic + (1/3) * (Systolic - Diastolic)) %>%
   
   # Eliminación de variables con alta correlación
   select(-Patient, -HeartRate.x, -HeartRate.y, -Weight , -Height, -Systolic, -Diastolic, -Date)
@@ -892,8 +892,11 @@ saveRDS(tree_model, "diabetes.rds")
 
 ## Conclusiones
 
-Como conclusión se puede decir que el modelo de clustering logró identificar dos grupos de pacientes con características similares
+El modelo de clustering logró identificar dos grupos de pacientes con características similares
 pero con diferentes niveles de riesgo de diabetes.
 
+Además de la identificación de dos grupos de pacientes con diferentes niveles de riesgo de diabetes, el análisis podría haber revelado algunos factores de riesgo específicos que contribuyen a la vulnerabilidad de ciertos pacientes. Estos factores podrían incluir el índice de masa corporal (IMC) y la oximetría. Identificar estos factores podría ser valioso para desarrollar estrategias de prevención y detección temprana.
 
-## Referencias
+Despues de la investigación realizada, se concluye que detectar la diabetes no es una tarea tribial
+ya que muchas muestras dependen de la hora del día en que se toman y de la alimentación del paciente.
+
