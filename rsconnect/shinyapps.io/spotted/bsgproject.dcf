@@ -5,7 +5,7 @@ account: spotted
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 10109843
-bundleId: 7771262
+bundleId: 7771350
 url: https://spotted.shinyapps.io/bsgproject/
 version: 1
 asMultiple: FALSE

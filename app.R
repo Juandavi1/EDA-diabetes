@@ -8,7 +8,7 @@
 #
 
 # don't worry about it! It has a 1USD limit.
-Sys.setenv(OPENAI_API_KEY = "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")
+Sys.setenv(OPENAI_API_KEY = "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")
 
 library(chatgpt)
 library(shiny)
